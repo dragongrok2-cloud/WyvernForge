@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wyvernforge-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: wyvern
+      POSTGRES_PASSWORD: wyvern_secret
+      POSTGRES_DB: wyvernforge
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: wyvernforge-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  # Uncomment when backend is ready
+  # backend:
+  #   build: ./backend
+  #   ports:
+  #     - "3001:3001"
+  #   depends_on:
+  #     - postgres
+  #     - redis
+  #   env_file:
+  #     - ./backend/.env
+
+volumes:
+  postgres_data:
