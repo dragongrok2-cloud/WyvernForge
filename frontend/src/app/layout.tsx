@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import './globals.css';
 
 export const metadata: Metadata = {
   title: 'WyvernForge',
@@ -12,7 +13,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru">
-      <body>{children}</body>
+      <body className="min-h-screen bg-forge-dark text-slate-100 antialiased">
+        {children}
+      </body>
     </html>
   );
 }
