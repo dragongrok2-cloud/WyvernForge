@@ -1,0 +1,35 @@
+// Prisma schema for WyvernForge
+// This is a starting point — will be expanded
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String    @unique
+  displayName   String?
+  avatarUrl     String?
+  bannerUrl     String?
+  bio           String?
+  status        UserStatus @default(OFFLINE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations will be added later:
+  // friends, posts, library, etc.
+}
+
+enum UserStatus {
+  ONLINE
+  OFFLINE
+  IN_GAME
+  AWAY
+  DO_NOT_DISTURB
+}
