@@ -2,7 +2,6 @@
 
 import { PlayerCard } from '@/components/PlayerCard';
 
-// Временные моковые данные (потом заменим на API)
 const mockRecommended = [
   {
     id: '1',
@@ -60,7 +59,11 @@ const mockRecommended = [
   },
 ];
 
-export function RecommendedPlayers() {
+interface Props {
+  currentUserId?: string;
+}
+
+export function RecommendedPlayers({ currentUserId }: Props) {
   return (
     <section className="mb-10">
       <div className="mb-4 flex items-center justify-between">
@@ -70,9 +73,13 @@ export function RecommendedPlayers() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3">
         {mockRecommended.map((player) => (
-          <PlayerCard key={player.id} {...player} />
+          <PlayerCard
+            key={player.id}
+            {...player}
+            currentUserId={currentUserId}
+          />
         ))}
       </div>
     </section>
