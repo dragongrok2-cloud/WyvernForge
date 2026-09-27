@@ -1,3 +1,8 @@
+'use client';
+
+import { useState } from 'react';
+import { api, getToken } from '@/lib/api';
+
 interface PlayerCardProps {
   id: string;
   username: string;
@@ -6,6 +11,7 @@ interface PlayerCardProps {
   status?: string;
   reason?: string;
   score?: number;
+  currentUserId?: string;
 }
 
 const statusColors: Record<string, string> = {
@@ -17,12 +23,38 @@ const statusColors: Record<string, string> = {
 };
 
 export function PlayerCard({
+  id,
   username,
   displayName,
   avatarUrl,
   status = 'OFFLINE',
   reason,
+  currentUserId,
 }: PlayerCardProps) {
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  async function handleAddFriend() {
+    if (!currentUserId || !getToken() || sent) return;
+    setLoading(true);
+    try {
+      await api('/friends/request', {
+        method: 'POST',
+        body: JSON.stringify({
+          requesterId: currentUserId,
+          addresseeId: id,
+        }),
+      });
+      setSent(true);
+    } catch (err: any) {
+      alert(err.message || 'Не удалось отправить заявку');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const isSelf = currentUserId === id;
+
   return (
     <div className="group relative flex flex-col items-center rounded-xl bg-forge-card border border-forge-border p-4 transition hover:border-wyvern-500/50 hover:shadow-lg hover:shadow-wyvern-500/10">
       <div className="relative mb-3">
@@ -53,9 +85,19 @@ export function PlayerCard({
         </p>
       )}
 
-      <button className="mt-3 w-full rounded-lg bg-wyvern-600/20 px-3 py-1.5 text-xs font-medium text-wyvern-300 transition hover:bg-wyvern-600 hover:text-white">
-        Добавить в друзья
-      </button>
+      {!isSelf && currentUserId && (
+        <button
+          onClick={handleAddFriend}
+          disabled={loading || sent}
+          className={`mt-3 w-full rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+            sent
+              ? 'bg-zinc-700 text-zinc-400 cursor-default'
+              : 'bg-wyvern-600/20 text-wyvern-300 hover:bg-wyvern-600 hover:text-white'
+          } disabled:opacity-50`}
+        >
+          {sent ? 'Заявка отправлена' : loading ? '...' : 'Добавить в друзья'}
+        </button>
+      )}
     </div>
   );
 }
