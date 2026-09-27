@@ -15,6 +15,16 @@ export default function FriendsPage() {
   const [pending, setPending] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'friends' | 'pending' | 'recommended'>('friends');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  async function loadData(me: any) {
+    const [friendsData, pendingData] = await Promise.all([
+      api<any[]>(`/friends/${me.id}`).catch(() => []),
+      api<any[]>(`/friends/${me.id}/pending`).catch(() => []),
+    ]);
+    setFriends(friendsData);
+    setPending(pendingData);
+  }
 
   useEffect(() => {
     if (!getToken()) {
@@ -22,19 +32,11 @@ export default function FriendsPage() {
       return;
     }
 
-    async function load() {
+    async function init() {
       try {
         const me = await getMe();
         setUser(me);
-
-        // Загружаем друзей и заявки
-        const [friendsData, pendingData] = await Promise.all([
-          api<any[]>(`/friends/${me.id}`).catch(() => []),
-          api<any[]>(`/friends/${me.id}/pending`).catch(() => []),
-        ]);
-
-        setFriends(friendsData);
-        setPending(pendingData);
+        await loadData(me);
       } catch {
         router.push('/login');
       } finally {
@@ -42,8 +44,40 @@ export default function FriendsPage() {
       }
     }
 
-    load();
+    init();
   }, [router]);
+
+  async function handleAccept(friendshipId: string) {
+    if (!user) return;
+    setActionLoading(friendshipId);
+    try {
+      await api(`/friends/${friendshipId}/accept`, {
+        method: 'POST',
+        body: JSON.stringify({ userId: user.id }),
+      });
+      await loadData(user);
+    } catch (err: any) {
+      alert(err.message || 'Ошибка');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleReject(friendshipId: string) {
+    if (!user) return;
+    setActionLoading(friendshipId);
+    try {
+      await api(`/friends/${friendshipId}/reject`, {
+        method: 'POST',
+        body: JSON.stringify({ userId: user.id }),
+      });
+      await loadData(user);
+    } catch (err: any) {
+      alert(err.message || 'Ошибка');
+    } finally {
+      setActionLoading(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -112,6 +146,7 @@ export default function FriendsPage() {
                     displayName={friend.displayName}
                     avatarUrl={friend.avatarUrl}
                     status={friend.status}
+                    currentUserId={user?.id}
                   />
                 ))}
               </div>
@@ -145,10 +180,18 @@ export default function FriendsPage() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button className="rounded-lg bg-wyvern-600 px-4 py-1.5 text-sm text-white hover:bg-wyvern-500 transition">
-                        Принять
+                      <button
+                        onClick={() => handleAccept(req.id)}
+                        disabled={actionLoading === req.id}
+                        className="rounded-lg bg-wyvern-600 px-4 py-1.5 text-sm text-white hover:bg-wyvern-500 disabled:opacity-50 transition"
+                      >
+                        {actionLoading === req.id ? '...' : 'Принять'}
                       </button>
-                      <button className="rounded-lg border border-forge-border px-4 py-1.5 text-sm text-zinc-400 hover:bg-forge-border transition">
+                      <button
+                        onClick={() => handleReject(req.id)}
+                        disabled={actionLoading === req.id}
+                        className="rounded-lg border border-forge-border px-4 py-1.5 text-sm text-zinc-400 hover:bg-forge-border disabled:opacity-50 transition"
+                      >
                         Отклонить
                       </button>
                     </div>
@@ -162,7 +205,7 @@ export default function FriendsPage() {
         {/* Recommended */}
         {tab === 'recommended' && (
           <div className="space-y-10">
-            <RecommendedPlayers />
+            <RecommendedPlayers currentUserId={user?.id} />
             <RecentlyPlayedTogether />
           </div>
         )}
