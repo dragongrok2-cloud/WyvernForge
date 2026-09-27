@@ -5,7 +5,6 @@ import { FriendsService } from './friends.service';
 export class FriendsController {
   constructor(private friendsService: FriendsService) {}
 
-  // TODO: replace with real auth guard + current user
   @Get(':userId')
   getFriends(@Param('userId') userId: string) {
     return this.friendsService.getFriends(userId);
@@ -24,5 +23,10 @@ export class FriendsController {
   @Post(':friendshipId/accept')
   accept(@Param('friendshipId') friendshipId: string, @Body() body: { userId: string }) {
     return this.friendsService.acceptRequest(body.userId, friendshipId);
+  }
+
+  @Post(':friendshipId/reject')
+  reject(@Param('friendshipId') friendshipId: string, @Body() body: { userId: string }) {
+    return this.friendsService.rejectRequest(body.userId, friendshipId);
   }
 }
