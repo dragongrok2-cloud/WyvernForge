@@ -1,6 +1,7 @@
 import { Header } from '@/components/Header';
 import { RecommendedPlayers } from '@/features/social/RecommendedPlayers';
 import { RecentlyPlayedTogether } from '@/features/social/RecentlyPlayedTogether';
+import { Feed } from '@/features/social/Feed';
 
 export default function HomePage() {
   return (
@@ -15,12 +16,18 @@ export default function HomePage() {
           </p>
         </div>
 
-        <RecommendedPlayers />
-        <RecentlyPlayedTogether />
+        <div className="grid gap-10 lg:grid-cols-3">
+          {/* Left: Feed */}
+          <div className="lg:col-span-2">
+            <Feed />
+          </div>
 
-        <section className="rounded-xl border border-forge-border bg-forge-card p-8 text-center">
-          <p className="text-zinc-500">Лента постов и сторис появится совсем скоро...</p>
-        </section>
+          {/* Right: Social sidebars */}
+          <div className="space-y-8">
+            <RecommendedPlayers />
+            <RecentlyPlayedTogether />
+          </div>
+        </div>
       </main>
     </div>
   );
