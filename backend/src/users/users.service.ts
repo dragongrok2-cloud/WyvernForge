@@ -58,4 +58,36 @@ export class UsersService {
       },
     });
   }
+
+  async updateProfile(
+    userId: string,
+    data: {
+      displayName?: string;
+      bio?: string;
+      avatarUrl?: string;
+      bannerUrl?: string;
+      status?: 'ONLINE' | 'OFFLINE' | 'IN_GAME' | 'AWAY' | 'DO_NOT_DISTURB';
+    },
+  ) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        displayName: data.displayName,
+        bio: data.bio,
+        avatarUrl: data.avatarUrl,
+        bannerUrl: data.bannerUrl,
+        status: data.status,
+      },
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        avatarUrl: true,
+        bannerUrl: true,
+        bio: true,
+        status: true,
+        createdAt: true,
+      },
+    });
+  }
 }
