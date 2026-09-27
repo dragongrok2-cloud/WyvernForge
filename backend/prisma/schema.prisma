@@ -1,5 +1,5 @@
 // Prisma schema for WyvernForge
-// This is a starting point — will be expanded
+// Expanded with social graph, games, library, play history and recommendations support
 
 generator client {
   provider = "prisma-client-js"
@@ -10,20 +10,35 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==================== USERS ====================
+
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  username      String    @unique
+  id            String     @id @default(cuid())
+  email         String     @unique
+  username      String     @unique
+  passwordHash  String?    // null if only OAuth
   displayName   String?
   avatarUrl     String?
   bannerUrl     String?
   bio           String?
   status        UserStatus @default(OFFLINE)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  currentGameId String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
-  // Relations will be added later:
-  // friends, posts, library, etc.
+  // Relations
+  currentGame         Game?              @relation("CurrentGame", fields: [currentGameId], references: [id])
+  library             LibraryEntry[]
+  posts               Post[]
+  sentFriendRequests  Friendship[]       @relation("SentRequests")
+  receivedFriendRequests Friendship[]    @relation("ReceivedRequests")
+  playSessions        PlaySession[]      @relation("PlayerSessions")
+  coPlaySessions      PlaySessionPlayer[]
+  recommendationsGiven Recommendation[]  @relation("RecommendationsGiven")
+  recommendationsReceived Recommendation[] @relation("RecommendationsReceived")
+
+  @@index([username])
+  @@index([status])
 }
 
 enum UserStatus {
@@ -32,4 +47,130 @@ enum UserStatus {
   IN_GAME
   AWAY
   DO_NOT_DISTURB
+}
+
+// ==================== FRIENDSHIP ====================
+
+model Friendship {
+  id          String           @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  requester User @relation("SentRequests", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("ReceivedRequests", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+  @@index([requesterId, status])
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
+}
+
+// ==================== GAMES ====================
+
+model Game {
+  id          String   @id @default(cuid())
+  steamAppId  String?  @unique  // for future Steam integration
+  title       String
+  slug        String   @unique
+  description String?
+  coverUrl    String?
+  headerUrl   String?
+  releaseDate DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  libraryEntries LibraryEntry[]
+  playSessions   PlaySession[]
+  currentPlayers User[]         @relation("CurrentGame")
+
+  @@index([title])
+}
+
+model LibraryEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  gameId    String
+  playtime  Int      @default(0) // minutes
+  lastPlayedAt DateTime?
+  addedAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  game Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, gameId])
+  @@index([userId])
+  @@index([gameId])
+}
+
+// ==================== PLAY SESSIONS ("играли вместе недавно") ====================
+
+model PlaySession {
+  id        String   @id @default(cuid())
+  gameId    String
+  startedAt DateTime @default(now())
+  endedAt   DateTime?
+  hostId    String   // who created the session / lobby
+
+  game     Game                @relation(fields: [gameId], references: [id])
+  host     User                @relation("PlayerSessions", fields: [hostId], references: [id])
+  players  PlaySessionPlayer[]
+
+  @@index([gameId, startedAt])
+  @@index([hostId])
+}
+
+model PlaySessionPlayer {
+  id            String   @id @default(cuid())
+  sessionId     String
+  userId        String
+  joinedAt      DateTime @default(now())
+  leftAt        DateTime?
+
+  session PlaySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@index([userId, joinedAt])
+}
+
+// ==================== POSTS / FEED ====================
+
+model Post {
+  id        String   @id @default(cuid())
+  authorId  String
+  content   String?
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId, createdAt])
+}
+
+// ==================== RECOMMENDATIONS ("Рекомендуемые игроки") ====================
+
+model Recommendation {
+  id          String   @id @default(cuid())
+  fromUserId  String   // who the recommendation is based on / algorithm source
+  toUserId    String   // recommended player
+  score       Float    @default(0) // recommendation strength
+  reason      String?  // e.g. "Играли вместе 3 раза", "Общие игры: 12", "Друзья друзей"
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?
+
+  fromUser User @relation("RecommendationsGiven", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("RecommendationsReceived", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId])
+  @@index([fromUserId, score])
 }
